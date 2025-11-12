@@ -1,0 +1,68 @@
+{
+  "voters": {
+    "B27293": {
+      "username": "B27293",
+      "full_name": "Esther Kica",
+      "password_hash": "5a3f4dd5782f0dbd323f01af3f44892f39f9a10a3d2cae4c1700e5f8dbca956c",
+      "department": "Computing",
+      "voter_id": "fc255953-0384-4755-9192-d6d8ddb6f7d6",
+      "has_voted": false
+    },
+    "b27": {
+      "username": "b27",
+      "full_name": "esther",
+      "password_hash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
+      "department": "computer science",
+      "voter_id": "197e182f-7796-4a5a-b1ef-8fad65dc4146",
+      "has_voted": false
+    }
+  },
+  "candidates": {
+    "251b7b90-0839-460e-8002-55a533d951f7": {
+      "candidate_id": "251b7b90-0839-460e-8002-55a533d951f7",
+      "name": "Alice N.",
+      "manifesto": "Transparency and student welfare"
+    },
+    "23a06891-3c70-4910-af61-d89fd413514b": {
+      "candidate_id": "23a06891-3c70-4910-af61-d89fd413514b",
+      "name": "Brian K.",
+      "manifesto": "Sports and tech development"
+    }
+  },
+  "votes": {},
+  "election_open": false,
+  "admin": {
+    "username": "admin",
+    "password_hash": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"
+  },
+  "departments": {
+    "guild": [
+      {
+        "candidate_id": "79f2d052-4d39-49b1-87ae-8a62e782d491",
+        "name": "Alice N.",
+        "manifesto": "Transparency and student welfare",
+        "department": "guild"
+      },
+      {
+        "candidate_id": "47c72178-c5c6-4ffc-86a0-34028b081fe2",
+        "name": "Brian K.",
+        "manifesto": "Sports and tech development",
+        "department": "guild"
+      }
+    ],
+    "Computer Science": [
+      {
+        "candidate_id": "359fe150-cbe6-49c1-9c52-b35dfa674def",
+        "name": "Cathy C.",
+        "manifesto": "Improve labs",
+        "department": "Computer Science"
+      },
+      {
+        "candidate_id": "528643e8-0c15-4194-a51e-8c1a76eb6392",
+        "name": "Daniel D.",
+        "manifesto": "Student mentorship",
+        "department": "Computer Science"
+      }
+    ]
+  }
+}
