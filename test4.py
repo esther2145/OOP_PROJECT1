@@ -23,6 +23,9 @@ import uuid
 from abc import ABC, abstractmethod
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
 
 DATA_FILE = "election_data.json"
 
@@ -107,6 +110,7 @@ class Candidate:
         self._candidate_id = str(uuid.uuid4())
         self._name = name
         self._manifesto = manifesto
+        self._position = position 
         self._department = department
 
     @property
@@ -124,18 +128,23 @@ class Candidate:
     @property
     def department(self):
         return self._department
+    
+    @property
+    def position(self):
+        return self._position
 
     def to_dict(self):
         return {
             "candidate_id": self._candidate_id,
             "name": self._name,
             "manifesto": self._manifesto,
+            "position": self._position,
             "department": self._department
         }
 
     @staticmethod
     def from_dict(d):
-        c = Candidate(d["name"], d.get("manifesto", ""), d.get("department", "guild"))
+        c = Candidate(d["name"], d.get("manifesto", ""), d.get("position","department") ,d.get("department", ""))
         c._candidate_id = d["candidate_id"]
         return c
 
@@ -244,6 +253,7 @@ class ElectionApp(tk.Tk):
         super().__init__()
         self.election = election
         self.current_user = None
+        self.is_admin_logged_in = False 
 
         self.title("University E-Voting System")
         self.geometry("900x600")
@@ -258,7 +268,7 @@ class ElectionApp(tk.Tk):
     def _create_navbar(self):
         nav = tk.Frame(self, bg="#4682b4", height=50)
         nav.pack(fill=tk.X)
-        btn_specs = [("Home", self.show_home), ("Register", self.show_register), ("Login", self.show_login), ("Admin", self.show_admin_login), ("Results", self.show_results)]
+        btn_specs = [("Home", self.show_home), ("Register", self.show_register), ("Login", self.show_login), ("Admin", self.show_admin_login)]
         for text, cmd in btn_specs:
             b = tk.Button(nav, text=text, command=cmd, bg="#5f9ea0", fg="white", relief=tk.FLAT, padx=10, pady=8)
             b.pack(side=tk.LEFT, padx=6, pady=6)
@@ -407,9 +417,15 @@ class ElectionApp(tk.Tk):
         pwd_entry.grid(row=1, column=1, pady=5)
 
         def do_login():
-            if self.election.admin_authenticate(user_entry.get().strip(), pwd_entry.get().strip()):
+            username = user_entry.get().strip()
+            password = pwd_entry.get().strip()
+
+            if self.election.admin_authenticate(username, password):
+                self.is_admin_logged_in = True   # mark that admin is now logged in
+                messagebox.showinfo("Admin", "Welcome, admin!")
                 self.show_admin_panel()
             else:
+                self.is_admin_logged_in = False  # ensure flag is reset if login fails
                 messagebox.showerror("Failed", "Invalid credentials")
 
         tk.Button(self.container, text="Login", command=do_login, bg="#4682b4", fg="white", padx=10).pack(pady=10)
@@ -445,24 +461,91 @@ class ElectionApp(tk.Tk):
             tk.Label(frame, text=dept, bg="#ffffff", font=("Arial", 12, "bold")).pack(anchor=tk.W)
             for c in lst:
                 tk.Label(frame, text=f"{c['name']} — {c.get('manifesto','')}", bg="#ffffff").pack(anchor=tk.W, padx=6)
+                
+        # 🔒 Only visible to admin: view results
+        ttk.Button(self.container, text="View Election Results", command=self.show_results).pack(pady=5)
 
         tk.Button(self.container, text="Back to Home", command=self.show_home, bg="#4682b4", fg="white", padx=10).pack(pady=12)
 
     def show_results(self):
         self.clear_container()
-        tk.Label(self.container, text="Election Results", bg="#e6f2ff", font=("Arial", 16, "bold"), fg="#004080").pack(pady=10)
+        tk.Label(self.container, text="Election Results", bg="#e6f2ff",
+            font=("Arial", 16, "bold"), fg="#004080").pack(pady=10)
+
+    # Restrict to admin only
+        if not self.is_admin_logged_in:
+            messagebox.showerror("Access Denied", "Only the admin can view results.")
+            return
+
         res = self.election.tally()
         if not res["by_candidate"]:
             tk.Label(self.container, text="No results yet.", bg="#e6f2ff").pack(pady=6)
+            ttk.Button(self.container, text="Back", command=self.show_admin_panel).pack(pady=10)
             return
-        # show by candidate
-        for c in res["by_candidate"]:
-            tk.Label(self.container, text=f"{c['name']} ({c['department']}): {c['votes']} votes", bg="#e6f2ff").pack(anchor=tk.W, padx=10)
-        tk.Label(self.container, text="\nTotals by department:", bg="#e6f2ff", font=("Arial", 12, "bold")).pack(pady=8)
-        for dept, total in res["by_department"].items():
-            tk.Label(self.container, text=f"{dept}: {total} votes", bg="#e6f2ff").pack(anchor=tk.W, padx=10)
 
-# --------------------------- Run ---------------------------
+    # Separate candidates by position
+        guild_candidates = [c for c in res["by_candidate"] if c['position'] == 'guild']
+        dept_candidates = [c for c in res["by_candidate"] if c['position'] != 'guild']
+
+    # --- Text summary ---
+        tk.Label(self.container, text="Guild President Results:", bg="#e6f2ff",
+             font=("Arial", 12, "bold")).pack(pady=6)
+        for c in guild_candidates:
+            tk.Label(
+                self.container,
+                text=f"{c['name']}: {c['votes']} votes",
+                bg="#e6f2ff"
+            ).pack(anchor=tk.W, padx=10)
+
+        tk.Label(self.container, text="\nDepartment Results:", bg="#e6f2ff",
+             font=("Arial", 12, "bold")).pack(pady=6)
+        for c in dept_candidates:
+            tk.Label(
+                self.container,
+                text=f"{c['name']} ({c['department']}): {c['votes']} votes",
+                bg="#e6f2ff"
+            ).pack(anchor=tk.W, padx=10)
+
+    # --- Graphs ---
+        try:
+            from matplotlib.figure import Figure
+            from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+        # --- Guild President Graph ---
+            if guild_candidates:
+                names = [c['name'] for c in guild_candidates]
+                votes = [c['votes'] for c in guild_candidates]
+                fig1 = Figure(figsize=(6, 2.5), dpi=100)
+                ax1 = fig1.add_subplot(111)
+                ax1.bar(names, votes, color="#ff6666")
+                ax1.set_title("Guild President Votes")
+                ax1.set_ylabel("Votes")
+                ax1.tick_params(axis='x', rotation=30)
+                canvas1 = FigureCanvasTkAgg(fig1, master=self.container)
+                canvas1.draw()
+                canvas1.get_tk_widget().pack(pady=6)
+
+        # --- Department Graph ---
+            if dept_candidates:
+                names = [c['name'] for c in dept_candidates]
+                votes = [c['votes'] for c in dept_candidates]
+                fig2 = Figure(figsize=(6, 3), dpi=100)
+                ax2 = fig2.add_subplot(111)
+                ax2.bar(names, votes, color="#0073e6")
+                ax2.set_title("Department Votes")
+                ax2.set_ylabel("Votes")
+                ax2.tick_params(axis='x', rotation=30)
+                canvas2 = FigureCanvasTkAgg(fig2, master=self.container)
+                canvas2.draw()
+                canvas2.get_tk_widget().pack(pady=6)
+
+        except ImportError:
+            tk.Label(self.container, text="Matplotlib not installed — graphs unavailable.", bg="#e6f2ff", fg="red").pack()
+
+    # Back button
+        ttk.Button(self.container, text="Back", command=self.show_admin_panel).pack(pady=10)
+
+#---------------------- RUN ------------------------
 if __name__ == "__main__":
     election = Election()
     # sample data seed

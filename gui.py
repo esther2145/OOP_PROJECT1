@@ -75,8 +75,8 @@ class E_VotingApp:
         }
 
         # Main menu
-        tk.Button(root, text="Login as Voter", command=self.voter_login).pack(pady=10)
-        tk.Button(root, text="Login as Admin", command=self.admin_login).pack(pady=10)
+        tk.Button(root, text="Login as Voter", command=self.voter_login).pack(pady=50)
+        tk.Button(root, text="Login as Admin", command=self.admin_login).pack(pady=50)
 
     def voter_login(self):
         login_win = tk.Toplevel(self.root)
